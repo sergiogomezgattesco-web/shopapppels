@@ -13,10 +13,15 @@ export default function Navbar() {
   return (
     <nav style={styles.nav}>
       <div style={styles.inner}>
-        <Link to="/" style={styles.brand}>
-          <span style={styles.brandIcon}>◈</span>
-          <span style={styles.brandText}>ShopApp</span>
-        </Link>
+        <div style={styles.brandArea}>
+          <Link to="/" style={styles.brand}>
+            <span style={styles.brandIcon}>◈</span>
+            <span style={styles.brandText}>ShopApp</span>
+          </Link>
+          {user && (
+            <span style={styles.greeting}>Hola, {user.name}</span>
+          )}
+        </div>
         <div style={styles.links}>
           <Link to="/" style={styles.link}>Productos</Link>
           {user && <Link to="/orders" style={styles.link}>Mis Pedidos</Link>}
@@ -26,8 +31,7 @@ export default function Navbar() {
           </Link>
           {user ? (
             <div style={styles.userArea}>
-              <span style={styles.userName}>{user.name}</span>
-              {user.role === 'ADMIN' && (
+{user.role === 'ADMIN' && (
                 <Link to="/admin" style={styles.linkAdmin}>Admin</Link>
               )}
               <button onClick={handleLogout} style={styles.logoutBtn}>Salir</button>
@@ -60,11 +64,24 @@ const styles: Record<string, React.CSSProperties> = {
     justifyContent: 'space-between',
     alignItems: 'center',
   },
+  brandArea: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '16px',
+  },
   brand: {
     display: 'flex',
     alignItems: 'center',
     gap: '8px',
     textDecoration: 'none',
+  },
+  greeting: {
+    fontSize: '0.82rem',
+    color: '#94a3b8',
+    fontWeight: '400',
+    fontFamily: 'Inter, sans-serif',
+    borderLeft: '1px solid rgba(0,0,0,0.1)',
+    paddingLeft: '16px',
   },
   brandIcon: {
     fontSize: '1.4rem',
@@ -132,11 +149,6 @@ const styles: Record<string, React.CSSProperties> = {
     alignItems: 'center',
     gap: '10px',
     marginLeft: '8px',
-  },
-  userName: {
-    fontSize: '0.88rem',
-    color: '#475569',
-    fontWeight: '500',
   },
   logoutBtn: {
     background: 'rgba(239,68,68,0.07)',
