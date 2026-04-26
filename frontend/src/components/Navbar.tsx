@@ -20,9 +20,6 @@ export default function Navbar() {
         <div style={styles.links}>
           <Link to="/" style={styles.link}>Productos</Link>
           {user && <Link to="/orders" style={styles.link}>Mis Pedidos</Link>}
-          {user?.role === 'ADMIN' && (
-            <Link to="/admin" style={styles.linkAdmin}>Admin</Link>
-          )}
           <Link to="/cart" style={styles.cartLink}>
             <span>Carrito</span>
             {cartCount > 0 && <span style={styles.badge}>{cartCount}</span>}
@@ -30,6 +27,9 @@ export default function Navbar() {
           {user ? (
             <div style={styles.userArea}>
               <span style={styles.userName}>{user.name}</span>
+              {user.role === 'ADMIN' && (
+                <Link to="/admin" style={styles.linkAdmin}>Admin</Link>
+              )}
               <button onClick={handleLogout} style={styles.logoutBtn}>Salir</button>
             </div>
           ) : (
