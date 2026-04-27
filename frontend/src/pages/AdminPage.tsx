@@ -172,6 +172,8 @@ export default function AdminPage() {
         ))}
       </div>
 
+      <div style={styles.tabContent}>
+
       {tab === 'products' && (
         <div>
           <div style={styles.section}>
@@ -463,6 +465,8 @@ export default function AdminPage() {
         </div>
       )}
 
+      </div>
+
       {editUser && (
         <div style={styles.modalOverlay} onClick={() => setEditUser(null)}>
           <div style={styles.modal} onClick={e => e.stopPropagation()}>
@@ -573,36 +577,51 @@ export default function AdminPage() {
 }
 
 const styles: Record<string, React.CSSProperties> = {
-  page: { maxWidth: '1200px', margin: '0 auto', padding: '48px 24px' },
-  pageHeader: { marginBottom: '32px' },
+  page: {
+    width: '100%',
+    maxWidth: '1200px',
+    margin: '0 auto',
+    padding: '48px 24px',
+    overflowX: 'hidden' as const,
+    boxSizing: 'border-box' as const,
+  },
+  pageHeader: { marginBottom: '24px' },
   pageTitle: { fontSize: '2rem', fontWeight: '700', color: '#1e293b', fontFamily: "'Space Grotesk', sans-serif", marginBottom: '4px' },
   pageSub: { color: '#94a3b8', fontSize: '0.9rem' },
   tabs: {
     display: 'flex',
     gap: '6px',
     marginBottom: '28px',
-    background: '#f1f4fb',
+    background: 'rgba(241,244,251,0.95)',
+    backdropFilter: 'blur(12px)',
     padding: '4px',
     borderRadius: '12px',
     width: 'fit-content',
     border: '1px solid rgba(0,0,0,0.06)',
+    position: 'sticky' as const,
+    top: '70px',
+    zIndex: 50,
+  },
+  tabContent: {
+    minHeight: '600px',
   },
   tab: {
-    padding: '8px 22px',
+    width: '120px',
+    padding: '8px 0',
     border: 'none',
     borderRadius: '9px',
     cursor: 'pointer',
     fontSize: '0.9rem',
-    fontWeight: '500',
+    fontWeight: '600',
     background: 'transparent',
     color: '#94a3b8',
     fontFamily: 'Inter, sans-serif',
+    textAlign: 'center' as const,
   },
   activeTab: {
     background: '#ffffff',
     color: '#7c3aed',
     boxShadow: '0 1px 6px rgba(0,0,0,0.08)',
-    fontWeight: '600',
   },
   section: { marginBottom: '36px' },
   sectionTitle: {
@@ -661,10 +680,10 @@ const styles: Record<string, React.CSSProperties> = {
     background: '#ffffff',
     border: '1px solid rgba(0,0,0,0.07)',
     borderRadius: '14px',
-    overflow: 'hidden',
+    overflowX: 'auto' as const,
     boxShadow: '0 1px 6px rgba(0,0,0,0.04)',
   },
-  table: { width: '100%', borderCollapse: 'collapse' as const },
+  table: { width: '100%', minWidth: '720px', borderCollapse: 'collapse' as const },
   th: {
     padding: '12px 16px',
     textAlign: 'left' as const,
