@@ -19,6 +19,7 @@ export const register = async (email: string, password: string, name: string) =>
 export const login = async (email: string, password: string) => {
   const user = await prisma.user.findUnique({ where: { email } });
   if (!user) throw new Error('Credenciales inválidas');
+  if (!user.active) throw new Error('Cuenta desactivada. Contactá al administrador.');
 
   const valid = await bcrypt.compare(password, user.password);
   if (!valid) throw new Error('Credenciales inválidas');

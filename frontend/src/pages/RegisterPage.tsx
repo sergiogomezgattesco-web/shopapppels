@@ -1,20 +1,34 @@
 import { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import api from '../services/api';
+import { useAuth } from '../context/AuthContext';
 
 export default function RegisterPage() {
   const [form, setForm] = useState({ name: '', email: '', password: '' });
   const [error, setError] = useState('');
+  const [loading, setLoading] = useState(false);
+  const { login } = useAuth();
   const navigate = useNavigate();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (loading) return;
     setError('');
+    setLoading(true);
     try {
       await api.post('/auth/register', form);
-      navigate('/login');
     } catch (err: any) {
       setError(err.response?.data?.message ?? 'Error al registrarse');
+      setLoading(false);
+      return;
+    }
+    try {
+      await login(form.email, form.password);
+      navigate('/');
+    } catch {
+      setError('Cuenta creada, pero falló el ingreso automático. Iniciá sesión manualmente.');
+      setLoading(false);
+      setTimeout(() => navigate('/login'), 1500);
     }
   };
 
@@ -62,7 +76,13 @@ export default function RegisterPage() {
               required
             />
           </div>
-          <button type="submit" style={styles.btn}>Crear cuenta</button>
+          <button
+            type="submit"
+            style={{ ...styles.btn, opacity: loading ? 0.7 : 1, cursor: loading ? 'not-allowed' : 'pointer' }}
+            disabled={loading}
+          >
+            {loading ? 'Creando cuenta...' : 'Crear cuenta'}
+          </button>
         </form>
 
         <p style={styles.footer}>

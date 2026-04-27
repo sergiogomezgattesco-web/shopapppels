@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import api from '../services/api';
+import { useAuth } from '../context/AuthContext';
 
 const ORDER_STATUSES = ['PENDING', 'CONFIRMED', 'SHIPPED', 'DELIVERED', 'CANCELLED'];
 const STATUS_LABELS: Record<string, string> = {
@@ -39,22 +40,31 @@ const mf: Record<string, React.CSSProperties> = {
 };
 
 export default function AdminPage() {
-  const [tab, setTab] = useState<'products' | 'orders' | 'categories'>('products');
+  const { user: currentUser } = useAuth();
+  const [tab, setTab] = useState<'products' | 'orders' | 'categories' | 'users'>('products');
   const [products, setProducts] = useState<any[]>([]);
   const [orders, setOrders] = useState<any[]>([]);
   const [categories, setCategories] = useState<any[]>([]);
+  const [users, setUsers] = useState<any[]>([]);
   const [form, setForm] = useState({ name: '', description: '', price: '', categoryId: '', initialStock: '' });
   const [stockForm, setStockForm] = useState<Record<string, { quantity: string; reason: string }>>({});
   const [newCategoryName, setNewCategoryName] = useState('');
   const [categoryMsg, setCategoryMsg] = useState<{ text: string; ok: boolean } | null>(null);
   const [editProduct, setEditProduct] = useState<any>(null);
+  const [editUser, setEditUser] = useState<any>(null);
+  const [userMsg, setUserMsg] = useState<{ text: string; ok: boolean } | null>(null);
+  const [userSearch, setUserSearch] = useState('');
+  const [userRoleFilter, setUserRoleFilter] = useState('ALL');
 
   const loadCategories = () => api.get('/products/categories').then(r => setCategories(r.data));
+
+  const loadUsers = () => api.get('/users').then(r => setUsers(r.data));
 
   const loadData = () => {
     loadCategories();
     api.get('/products').then(r => setProducts(r.data));
     api.get('/orders').then(r => setOrders(r.data));
+    loadUsers();
   };
 
   useEffect(() => { loadData(); }, []);
@@ -102,6 +112,19 @@ export default function AdminPage() {
     api.get('/products').then(r => setProducts(r.data));
   };
 
+  const handleSaveUser = async (e: React.FormEvent) => {
+    e.preventDefault();
+    try {
+      await api.put(`/users/${editUser.id}`, { role: editUser.role, active: editUser.active });
+      setEditUser(null);
+      await loadUsers();
+      setUserMsg({ text: 'Usuario actualizado correctamente', ok: true });
+    } catch (err: any) {
+      setUserMsg({ text: err.response?.data?.message ?? 'Error al actualizar usuario', ok: false });
+    }
+    setTimeout(() => setUserMsg(null), 3000);
+  };
+
   const handleDeleteCategory = async (id: string, name: string) => {
     if (!confirm(`¿Eliminar la categoría "${name}"?`)) return;
     try {
@@ -118,13 +141,23 @@ export default function AdminPage() {
     { key: 'products', label: 'Productos' },
     { key: 'categories', label: 'Categorías' },
     { key: 'orders', label: 'Pedidos' },
+    { key: 'users', label: 'Usuarios' },
   ] as const;
+
+  const filteredUsers = users.filter(u => {
+    if (userRoleFilter !== 'ALL' && u.role !== userRoleFilter) return false;
+    if (userSearch) {
+      const t = userSearch.toLowerCase();
+      if (!u.name.toLowerCase().includes(t) && !u.email.toLowerCase().includes(t)) return false;
+    }
+    return true;
+  });
 
   return (
     <div style={styles.page}>
       <div style={styles.pageHeader}>
         <h1 style={styles.pageTitle}>Panel de Administración</h1>
-        <p style={styles.pageSub}>Gestioná productos, categorías y pedidos</p>
+        <p style={styles.pageSub}>Gestioná productos, categorías, pedidos y usuarios</p>
       </div>
 
       <div style={styles.tabs}>
@@ -326,6 +359,162 @@ export default function AdminPage() {
                 ))}
               </tbody>
             </table>
+          </div>
+        </div>
+      )}
+
+      {tab === 'users' && (
+        <div>
+          <div style={styles.section}>
+            <h2 style={styles.sectionTitle}>Usuarios ({users.length})</h2>
+            <div style={{ display: 'flex', gap: '10px', marginBottom: '14px', flexWrap: 'wrap' }}>
+              <input
+                style={{ ...styles.input, flex: '1 1 240px' }}
+                placeholder="Buscar por nombre o email..."
+                value={userSearch}
+                onChange={e => setUserSearch(e.target.value)}
+              />
+              <select
+                style={styles.input}
+                value={userRoleFilter}
+                onChange={e => setUserRoleFilter(e.target.value)}
+              >
+                <option value="ALL">Todos los roles</option>
+                <option value="ADMIN">Admin</option>
+                <option value="CUSTOMER">Cliente</option>
+              </select>
+            </div>
+            {userMsg && (
+              <div style={{
+                marginBottom: '12px',
+                padding: '10px 14px',
+                borderRadius: '10px',
+                fontSize: '0.88rem',
+                fontWeight: '500',
+                background: userMsg.ok ? 'rgba(16,185,129,0.08)' : 'rgba(239,68,68,0.07)',
+                color: userMsg.ok ? '#059669' : '#dc2626',
+                border: `1px solid ${userMsg.ok ? 'rgba(16,185,129,0.2)' : 'rgba(239,68,68,0.18)'}`,
+              }}>
+                {userMsg.text}
+              </div>
+            )}
+            <div style={styles.tableWrap}>
+              <table style={styles.table}>
+                <thead>
+                  <tr>
+                    {['Nombre', 'Email', 'Rol', 'Estado', 'Registro', ''].map(h => (
+                      <th key={h} style={styles.th}>{h}</th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {filteredUsers.map((u, i) => (
+                    <tr key={u.id} style={{ background: i % 2 === 0 ? '#ffffff' : '#fafbff' }}>
+                      <td style={styles.td}>
+                        <span style={styles.productName}>{u.name}</span>
+                        {currentUser?.id === u.id && (
+                          <span style={{ ...styles.categoryTag, marginLeft: '8px', color: '#059669', background: 'rgba(16,185,129,0.08)' }}>Vos</span>
+                        )}
+                      </td>
+                      <td style={styles.td}><span style={{ color: '#475569' }}>{u.email}</span></td>
+                      <td style={styles.td}>
+                        <span style={{
+                          ...styles.categoryTag,
+                          color: u.role === 'ADMIN' ? '#d97706' : '#7c3aed',
+                          background: u.role === 'ADMIN' ? 'rgba(245,158,11,0.08)' : 'rgba(124,58,237,0.08)',
+                        }}>
+                          {u.role === 'ADMIN' ? 'Admin' : 'Cliente'}
+                        </span>
+                      </td>
+                      <td style={styles.td}>
+                        <span style={{
+                          padding: '3px 10px',
+                          borderRadius: '20px',
+                          fontSize: '0.78rem',
+                          fontWeight: '600',
+                          color: u.active ? '#059669' : '#dc2626',
+                          background: u.active ? 'rgba(16,185,129,0.08)' : 'rgba(239,68,68,0.07)',
+                          border: `1px solid ${u.active ? 'rgba(16,185,129,0.2)' : 'rgba(239,68,68,0.18)'}`,
+                        }}>
+                          {u.active ? 'Activo' : 'Inactivo'}
+                        </span>
+                      </td>
+                      <td style={styles.td}>
+                        <span style={{ color: '#94a3b8', fontSize: '0.85rem' }}>
+                          {new Date(u.createdAt).toLocaleDateString('es-AR', { day: '2-digit', month: 'short', year: 'numeric' })}
+                        </span>
+                      </td>
+                      <td style={styles.td}>
+                        <button style={styles.btnEdit} onClick={() => setEditUser({ ...u })}>
+                          Editar
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                  {filteredUsers.length === 0 && (
+                    <tr><td colSpan={6} style={{ ...styles.td, textAlign: 'center', color: '#94a3b8', padding: '32px' }}>
+                      No hay usuarios que coincidan con los filtros
+                    </td></tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {editUser && (
+        <div style={styles.modalOverlay} onClick={() => setEditUser(null)}>
+          <div style={styles.modal} onClick={e => e.stopPropagation()}>
+            <div style={styles.modalHeader}>
+              <h3 style={styles.modalTitle}>Editar usuario</h3>
+              <button style={styles.modalClose} onClick={() => setEditUser(null)}>✕</button>
+            </div>
+            <form onSubmit={handleSaveUser}>
+              <div style={mf.field}>
+                <label style={mf.label}>Nombre</label>
+                <input style={{ ...mf.input, opacity: 0.7 }} value={editUser.name} disabled />
+              </div>
+              <div style={mf.field}>
+                <label style={mf.label}>Email</label>
+                <input style={{ ...mf.input, opacity: 0.7 }} value={editUser.email} disabled />
+              </div>
+              <div style={{ display: 'flex', gap: '12px' }}>
+                <div style={{ ...mf.field, flex: 1 }}>
+                  <label style={mf.label}>Rol</label>
+                  <select
+                    style={mf.input}
+                    value={editUser.role}
+                    onChange={e => setEditUser({ ...editUser, role: e.target.value })}
+                    disabled={currentUser?.id === editUser.id}
+                  >
+                    <option value="CUSTOMER">Cliente</option>
+                    <option value="ADMIN">Admin</option>
+                  </select>
+                </div>
+                <div style={{ ...mf.field, flex: 1 }}>
+                  <label style={mf.label}>Estado</label>
+                  <select
+                    style={mf.input}
+                    value={editUser.active ? 'true' : 'false'}
+                    onChange={e => setEditUser({ ...editUser, active: e.target.value === 'true' })}
+                    disabled={currentUser?.id === editUser.id}
+                  >
+                    <option value="true">Activo</option>
+                    <option value="false">Inactivo</option>
+                  </select>
+                </div>
+              </div>
+              {currentUser?.id === editUser.id && (
+                <p style={{ fontSize: '0.82rem', color: '#94a3b8', marginTop: '4px' }}>
+                  No podés modificar tu propio rol o estado.
+                </p>
+              )}
+              <div style={mf.actions}>
+                <button type="button" style={mf.btnCancel} onClick={() => setEditUser(null)}>Cancelar</button>
+                <button type="submit" style={mf.btnSave}>Guardar cambios</button>
+              </div>
+            </form>
           </div>
         </div>
       )}

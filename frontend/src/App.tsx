@@ -13,6 +13,7 @@ import ProductDetailPage from './pages/ProductDetailPage';
 import PaymentSuccessPage from './pages/PaymentSuccessPage';
 import PaymentFailurePage from './pages/PaymentFailurePage';
 import PaymentPendingPage from './pages/PaymentPendingPage';
+import ProfilePage from './pages/ProfilePage';
 
 const PrivateRoute = ({ children }: { children: JSX.Element }) => {
   const { user } = useAuth();
@@ -40,6 +41,7 @@ function AppRoutes() {
         <Route path="/payment/failure" element={<PaymentFailurePage />} />
         <Route path="/payment/pending" element={<PaymentPendingPage />} />
         <Route path="/admin" element={<AdminRoute><AdminPage /></AdminRoute>} />
+        <Route path="/profile" element={<PrivateRoute><ProfilePage /></PrivateRoute>} />
       </Routes>
     </>
   );

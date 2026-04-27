@@ -13,6 +13,7 @@ model User {
   password  String
   name      String
   role      Role     @default(CUSTOMER)
+  active    Boolean  @default(true)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
   orders    Order[]

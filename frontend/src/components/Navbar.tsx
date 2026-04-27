@@ -19,7 +19,9 @@ export default function Navbar() {
             <span style={styles.brandText}>ShopApp</span>
           </Link>
           {user && (
-            <span style={styles.greeting}>Hola, {user.name}</span>
+            <Link to="/profile" style={styles.greeting} title="Editar perfil">
+              Hola, {user.name}
+            </Link>
           )}
         </div>
         <div style={styles.links}>
@@ -82,6 +84,8 @@ const styles: Record<string, React.CSSProperties> = {
     fontFamily: 'Inter, sans-serif',
     borderLeft: '1px solid rgba(0,0,0,0.1)',
     paddingLeft: '16px',
+    textDecoration: 'none',
+    cursor: 'pointer',
   },
   brandIcon: {
     fontSize: '1.4rem',
