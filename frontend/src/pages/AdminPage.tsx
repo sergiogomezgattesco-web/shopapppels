@@ -51,10 +51,17 @@ export default function AdminPage() {
   const [newCategoryName, setNewCategoryName] = useState('');
   const [categoryMsg, setCategoryMsg] = useState<{ text: string; ok: boolean } | null>(null);
   const [editProduct, setEditProduct] = useState<any>(null);
+  const [showCreateProduct, setShowCreateProduct] = useState(false);
+  const [showCreateCategory, setShowCreateCategory] = useState(false);
   const [editUser, setEditUser] = useState<any>(null);
   const [userMsg, setUserMsg] = useState<{ text: string; ok: boolean } | null>(null);
   const [userSearch, setUserSearch] = useState('');
   const [userRoleFilter, setUserRoleFilter] = useState('ALL');
+  const [productSearch, setProductSearch] = useState('');
+  const [productCategoryFilter, setProductCategoryFilter] = useState('ALL');
+  const [categorySearch, setCategorySearch] = useState('');
+  const [orderSearch, setOrderSearch] = useState('');
+  const [orderStatusFilter, setOrderStatusFilter] = useState('ALL');
 
   const loadCategories = () => api.get('/products/categories').then(r => setCategories(r.data));
 
@@ -73,6 +80,7 @@ export default function AdminPage() {
     e.preventDefault();
     await api.post('/products', { ...form, price: parseFloat(form.price), initialStock: parseInt(form.initialStock) });
     setForm({ name: '', description: '', price: '', categoryId: '', initialStock: '' });
+    setShowCreateProduct(false);
     api.get('/products').then(r => setProducts(r.data));
   };
 
@@ -96,6 +104,7 @@ export default function AdminPage() {
     try {
       await api.post('/products/categories', { name });
       setNewCategoryName('');
+      setShowCreateCategory(false);
       await loadCategories();
       setCategoryMsg({ text: `Categoría "${name}" creada correctamente`, ok: true });
     } catch (err: any) {
@@ -153,6 +162,31 @@ export default function AdminPage() {
     return true;
   });
 
+  const filteredProducts = products.filter(p => {
+    if (productCategoryFilter !== 'ALL' && p.category?.id !== productCategoryFilter) return false;
+    if (productSearch) {
+      const t = productSearch.toLowerCase();
+      if (!p.name.toLowerCase().includes(t) && !(p.description ?? '').toLowerCase().includes(t)) return false;
+    }
+    return true;
+  });
+
+  const filteredCategories = categories.filter(c => {
+    if (categorySearch && !c.name.toLowerCase().includes(categorySearch.toLowerCase())) return false;
+    return true;
+  });
+
+  const filteredOrders = orders.filter(o => {
+    if (orderStatusFilter !== 'ALL' && o.status !== orderStatusFilter) return false;
+    if (orderSearch) {
+      const t = orderSearch.toLowerCase();
+      const idMatch = o.id.toLowerCase().includes(t);
+      const userMatch = o.user?.name?.toLowerCase().includes(t) || o.user?.email?.toLowerCase().includes(t);
+      if (!idMatch && !userMatch) return false;
+    }
+    return true;
+  });
+
   return (
     <div style={styles.page}>
       <div style={styles.pageHeader}>
@@ -177,27 +211,28 @@ export default function AdminPage() {
       {tab === 'products' && (
         <div>
           <div style={styles.section}>
-            <h2 style={styles.sectionTitle}>Nuevo producto</h2>
-            <form onSubmit={handleCreateProduct} style={styles.form}>
-              <input style={styles.input} placeholder="Nombre del producto" value={form.name}
-                onChange={e => setForm({ ...form, name: e.target.value })} required />
-              <input style={styles.input} placeholder="Descripción" value={form.description}
-                onChange={e => setForm({ ...form, description: e.target.value })} required />
-              <input style={styles.input} type="number" placeholder="Precio" value={form.price}
-                onChange={e => setForm({ ...form, price: e.target.value })} required />
-              <input style={styles.input} type="number" placeholder="Stock inicial" value={form.initialStock}
-                onChange={e => setForm({ ...form, initialStock: e.target.value })} required />
-              <select style={styles.input} value={form.categoryId}
-                onChange={e => setForm({ ...form, categoryId: e.target.value })} required>
-                <option value="">Seleccionar categoría</option>
+            <div style={styles.toolbar}>
+              <input
+                style={styles.toolbarSearch}
+                placeholder="Buscar productos por nombre o descripción..."
+                value={productSearch}
+                onChange={e => setProductSearch(e.target.value)}
+              />
+              <select
+                style={styles.toolbarSelect}
+                value={productCategoryFilter}
+                onChange={e => setProductCategoryFilter(e.target.value)}
+              >
+                <option value="ALL">Todas las categorías</option>
                 {categories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
               </select>
-              <button type="submit" style={styles.btnCreate}>+ Crear producto</button>
-            </form>
-          </div>
-
-          <div style={styles.section}>
-            <h2 style={styles.sectionTitle}>Productos ({products.length})</h2>
+              <span style={styles.toolbarCount}>
+                {filteredProducts.length} de {products.length}
+              </span>
+              <button style={styles.btnCreate} onClick={() => setShowCreateProduct(true)}>
+                + Nuevo producto
+              </button>
+            </div>
             <div style={styles.tableWrap}>
               <table style={styles.table}>
                 <thead>
@@ -208,7 +243,7 @@ export default function AdminPage() {
                   </tr>
                 </thead>
                 <tbody>
-                  {products.map((p, i) => (
+                  {filteredProducts.map((p, i) => (
                     <tr key={p.id} style={{ background: i % 2 === 0 ? '#ffffff' : '#fafbff' }}>
                       <td style={styles.td}><span style={styles.productName}>{p.name}</span></td>
                       <td style={styles.td}><span style={styles.categoryTag}>{p.category.name}</span></td>
@@ -239,6 +274,11 @@ export default function AdminPage() {
                       </td>
                     </tr>
                   ))}
+                  {filteredProducts.length === 0 && (
+                    <tr><td colSpan={6} style={styles.emptyRow}>
+                      No hay productos que coincidan con los filtros
+                    </td></tr>
+                  )}
                 </tbody>
               </table>
             </div>
@@ -249,20 +289,23 @@ export default function AdminPage() {
       {tab === 'categories' && (
         <div>
           <div style={styles.section}>
-            <h2 style={styles.sectionTitle}>Nueva categoría</h2>
-            <form onSubmit={handleCreateCategory} style={styles.inlineForm}>
+            <div style={styles.toolbar}>
               <input
-                style={{ ...styles.input, flex: 1 }}
-                placeholder="Ej: Electrónica, Ropa, Deportes..."
-                value={newCategoryName}
-                onChange={e => setNewCategoryName(e.target.value)}
-                required
+                style={styles.toolbarSearch}
+                placeholder="Buscar categorías..."
+                value={categorySearch}
+                onChange={e => setCategorySearch(e.target.value)}
               />
-              <button type="submit" style={styles.btnCreate}>+ Crear</button>
-            </form>
+              <span style={styles.toolbarCount}>
+                {filteredCategories.length} de {categories.length}
+              </span>
+              <button style={styles.btnCreate} onClick={() => setShowCreateCategory(true)}>
+                + Nueva categoría
+              </button>
+            </div>
             {categoryMsg && (
               <div style={{
-                marginTop: '10px',
+                marginBottom: '12px',
                 padding: '10px 14px',
                 borderRadius: '10px',
                 fontSize: '0.88rem',
@@ -274,63 +317,75 @@ export default function AdminPage() {
                 {categoryMsg.text}
               </div>
             )}
-          </div>
-
-          <div style={styles.section}>
-            <h2 style={styles.sectionTitle}>Categorías existentes ({categories.length})</h2>
-            {categories.length === 0 ? (
-              <div style={styles.emptyState}>
-                <span style={{ fontSize: '2rem' }}>🏷️</span>
-                <p style={{ color: '#94a3b8', marginTop: '8px' }}>No hay categorías creadas aún.</p>
-              </div>
-            ) : (
-              <div style={styles.tableWrap}>
-                <table style={styles.table}>
-                  <thead>
-                    <tr>
-                      {['Nombre', 'Productos asociados', 'Acciones'].map(h => (
-                        <th key={h} style={styles.th}>{h}</th>
-                      ))}
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {categories.map((cat, i) => {
-                      const count = products.filter(p => p.category?.id === cat.id).length;
-                      return (
-                        <tr key={cat.id} style={{ background: i % 2 === 0 ? '#ffffff' : '#fafbff' }}>
-                          <td style={styles.td}>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                              <span style={styles.categoryIconSmall}>🏷️</span>
-                              <span style={styles.productName}>{cat.name}</span>
-                            </div>
-                          </td>
-                          <td style={styles.td}>
-                            <span style={{ ...styles.categoryTag }}>
-                              {count} producto{count !== 1 ? 's' : ''}
-                            </span>
-                          </td>
-                          <td style={styles.td}>
-                            <button
-                              style={styles.btnDelete}
-                              onClick={() => handleDeleteCategory(cat.id, cat.name)}
-                            >
-                              Eliminar
-                            </button>
-                          </td>
-                        </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
-              </div>
-            )}
+            <div style={styles.tableWrap}>
+              <table style={styles.table}>
+                <thead>
+                  <tr>
+                    {['Nombre', 'Productos asociados', 'Acciones'].map(h => (
+                      <th key={h} style={styles.th}>{h}</th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {filteredCategories.map((cat, i) => {
+                    const count = products.filter(p => p.category?.id === cat.id).length;
+                    return (
+                      <tr key={cat.id} style={{ background: i % 2 === 0 ? '#ffffff' : '#fafbff' }}>
+                        <td style={styles.td}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                            <span style={styles.categoryIconSmall}>🏷️</span>
+                            <span style={styles.productName}>{cat.name}</span>
+                          </div>
+                        </td>
+                        <td style={styles.td}>
+                          <span style={{ ...styles.categoryTag }}>
+                            {count} producto{count !== 1 ? 's' : ''}
+                          </span>
+                        </td>
+                        <td style={styles.td}>
+                          <button
+                            style={styles.btnDelete}
+                            onClick={() => handleDeleteCategory(cat.id, cat.name)}
+                          >
+                            Eliminar
+                          </button>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                  {filteredCategories.length === 0 && (
+                    <tr><td colSpan={3} style={styles.emptyRow}>
+                      {categories.length === 0 ? 'No hay categorías creadas aún' : 'No hay categorías que coincidan con la búsqueda'}
+                    </td></tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
           </div>
         </div>
       )}
 
       {tab === 'orders' && (
         <div style={styles.section}>
-          <h2 style={styles.sectionTitle}>Todos los pedidos ({orders.length})</h2>
+          <div style={styles.toolbar}>
+            <input
+              style={styles.toolbarSearch}
+              placeholder="Buscar por ID o cliente..."
+              value={orderSearch}
+              onChange={e => setOrderSearch(e.target.value)}
+            />
+            <select
+              style={styles.toolbarSelect}
+              value={orderStatusFilter}
+              onChange={e => setOrderStatusFilter(e.target.value)}
+            >
+              <option value="ALL">Todos los estados</option>
+              {ORDER_STATUSES.map(s => <option key={s} value={s}>{STATUS_LABELS[s]}</option>)}
+            </select>
+            <span style={styles.toolbarCount}>
+              {filteredOrders.length} de {orders.length}
+            </span>
+          </div>
           <div style={styles.tableWrap}>
             <table style={styles.table}>
               <thead>
@@ -341,7 +396,7 @@ export default function AdminPage() {
                 </tr>
               </thead>
               <tbody>
-                {orders.map((o, i) => (
+                {filteredOrders.map((o, i) => (
                   <tr key={o.id} style={{ background: i % 2 === 0 ? '#ffffff' : '#fafbff' }}>
                     <td style={styles.td}><span style={styles.orderId}>#{o.id.slice(0, 8).toUpperCase()}</span></td>
                     <td style={styles.td}><span style={{ color: '#475569' }}>{o.user.name}</span></td>
@@ -359,6 +414,11 @@ export default function AdminPage() {
                     </td>
                   </tr>
                 ))}
+                {filteredOrders.length === 0 && (
+                  <tr><td colSpan={5} style={styles.emptyRow}>
+                    No hay pedidos que coincidan con los filtros
+                  </td></tr>
+                )}
               </tbody>
             </table>
           </div>
@@ -368,16 +428,15 @@ export default function AdminPage() {
       {tab === 'users' && (
         <div>
           <div style={styles.section}>
-            <h2 style={styles.sectionTitle}>Usuarios ({users.length})</h2>
-            <div style={{ display: 'flex', gap: '10px', marginBottom: '14px', flexWrap: 'wrap' }}>
+            <div style={styles.toolbar}>
               <input
-                style={{ ...styles.input, flex: '1 1 240px' }}
+                style={styles.toolbarSearch}
                 placeholder="Buscar por nombre o email..."
                 value={userSearch}
                 onChange={e => setUserSearch(e.target.value)}
               />
               <select
-                style={styles.input}
+                style={styles.toolbarSelect}
                 value={userRoleFilter}
                 onChange={e => setUserRoleFilter(e.target.value)}
               >
@@ -385,6 +444,9 @@ export default function AdminPage() {
                 <option value="ADMIN">Admin</option>
                 <option value="CUSTOMER">Cliente</option>
               </select>
+              <span style={styles.toolbarCount}>
+                {filteredUsers.length} de {users.length}
+              </span>
             </div>
             {userMsg && (
               <div style={{
@@ -523,6 +585,75 @@ export default function AdminPage() {
         </div>
       )}
 
+      {showCreateProduct && (
+        <div style={styles.modalOverlay} onClick={() => setShowCreateProduct(false)}>
+          <div style={styles.modal} onClick={e => e.stopPropagation()}>
+            <div style={styles.modalHeader}>
+              <h3 style={styles.modalTitle}>Nuevo producto</h3>
+              <button style={styles.modalClose} onClick={() => setShowCreateProduct(false)}>✕</button>
+            </div>
+            <form onSubmit={handleCreateProduct}>
+              <div style={mf.field}>
+                <label style={mf.label}>Nombre</label>
+                <input style={mf.input} placeholder="Ej: Auriculares bluetooth" value={form.name}
+                  onChange={e => setForm({ ...form, name: e.target.value })} required />
+              </div>
+              <div style={mf.field}>
+                <label style={mf.label}>Descripción</label>
+                <input style={mf.input} placeholder="Breve descripción del producto" value={form.description}
+                  onChange={e => setForm({ ...form, description: e.target.value })} required />
+              </div>
+              <div style={{ display: 'flex', gap: '12px' }}>
+                <div style={{ ...mf.field, flex: 1 }}>
+                  <label style={mf.label}>Precio</label>
+                  <input style={mf.input} type="number" step="0.01" placeholder="0.00" value={form.price}
+                    onChange={e => setForm({ ...form, price: e.target.value })} required />
+                </div>
+                <div style={{ ...mf.field, flex: 1 }}>
+                  <label style={mf.label}>Stock inicial</label>
+                  <input style={mf.input} type="number" placeholder="0" value={form.initialStock}
+                    onChange={e => setForm({ ...form, initialStock: e.target.value })} required />
+                </div>
+              </div>
+              <div style={mf.field}>
+                <label style={mf.label}>Categoría</label>
+                <select style={mf.input} value={form.categoryId}
+                  onChange={e => setForm({ ...form, categoryId: e.target.value })} required>
+                  <option value="">Seleccionar categoría</option>
+                  {categories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+                </select>
+              </div>
+              <div style={mf.actions}>
+                <button type="button" style={mf.btnCancel} onClick={() => setShowCreateProduct(false)}>Cancelar</button>
+                <button type="submit" style={mf.btnSave}>Crear producto</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {showCreateCategory && (
+        <div style={styles.modalOverlay} onClick={() => setShowCreateCategory(false)}>
+          <div style={styles.modal} onClick={e => e.stopPropagation()}>
+            <div style={styles.modalHeader}>
+              <h3 style={styles.modalTitle}>Nueva categoría</h3>
+              <button style={styles.modalClose} onClick={() => setShowCreateCategory(false)}>✕</button>
+            </div>
+            <form onSubmit={handleCreateCategory}>
+              <div style={mf.field}>
+                <label style={mf.label}>Nombre</label>
+                <input style={mf.input} placeholder="Ej: Electrónica, Ropa, Deportes..." value={newCategoryName}
+                  onChange={e => setNewCategoryName(e.target.value)} required autoFocus />
+              </div>
+              <div style={mf.actions}>
+                <button type="button" style={mf.btnCancel} onClick={() => setShowCreateCategory(false)}>Cancelar</button>
+                <button type="submit" style={mf.btnSave}>Crear categoría</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
       {editProduct && (
         <div style={styles.modalOverlay} onClick={() => setEditProduct(null)}>
           <div style={styles.modal} onClick={e => e.stopPropagation()}>
@@ -604,6 +735,54 @@ const styles: Record<string, React.CSSProperties> = {
   },
   tabContent: {
     minHeight: '600px',
+  },
+  toolbar: {
+    display: 'flex',
+    gap: '12px',
+    marginBottom: '16px',
+    alignItems: 'center',
+    flexWrap: 'wrap' as const,
+    background: '#ffffff',
+    border: '1px solid rgba(0,0,0,0.07)',
+    borderRadius: '14px',
+    padding: '14px 16px',
+    boxShadow: '0 1px 6px rgba(0,0,0,0.04)',
+  },
+  toolbarSearch: {
+    flex: '1 1 240px',
+    padding: '10px 14px',
+    border: '1px solid rgba(0,0,0,0.09)',
+    borderRadius: '10px',
+    fontSize: '0.9rem',
+    background: '#f8faff',
+    fontFamily: 'Inter, sans-serif',
+    outline: 'none',
+    color: '#1e293b',
+  },
+  toolbarSelect: {
+    padding: '10px 14px',
+    border: '1px solid rgba(0,0,0,0.09)',
+    borderRadius: '10px',
+    fontSize: '0.9rem',
+    background: '#f8faff',
+    fontFamily: 'Inter, sans-serif',
+    cursor: 'pointer',
+    outline: 'none',
+    color: '#1e293b',
+    minWidth: '170px',
+  },
+  toolbarCount: {
+    fontSize: '0.82rem',
+    color: '#94a3b8',
+    fontWeight: '500',
+    marginLeft: 'auto',
+    marginRight: '4px',
+  },
+  emptyRow: {
+    padding: '40px',
+    textAlign: 'center' as const,
+    color: '#94a3b8',
+    fontSize: '0.9rem',
   },
   tab: {
     width: '120px',
