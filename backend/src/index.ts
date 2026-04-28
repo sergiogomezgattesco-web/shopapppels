@@ -11,7 +11,10 @@ import { errorHandler } from './middleware/error.middleware';
 const app = express();
 const PORT = process.env.PORT ?? 3001;
 
-app.use(cors({ origin: 'http://localhost:5173' }));
+const allowedOrigins = (process.env.FRONTEND_URL ?? 'http://localhost:5173')
+  .split(',')
+  .map(o => o.trim());
+app.use(cors({ origin: allowedOrigins }));
 app.use(express.json());
 
 app.use('/api/auth', authRoutes);
