@@ -1,3 +1,4 @@
+import React from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { CartProvider } from './context/CartContext';
@@ -15,12 +16,12 @@ import PaymentFailurePage from './pages/PaymentFailurePage';
 import PaymentPendingPage from './pages/PaymentPendingPage';
 import ProfilePage from './pages/ProfilePage';
 
-const PrivateRoute = ({ children }: { children: JSX.Element }) => {
+const PrivateRoute = ({ children }: { children: React.JSX.Element }) => {
   const { user } = useAuth();
   return user ? children : <Navigate to="/login" />;
 };
 
-const AdminRoute = ({ children }: { children: JSX.Element }) => {
+const AdminRoute = ({ children }: { children: React.JSX.Element }) => {
   const { user } = useAuth();
   return user?.role === 'ADMIN' ? children : <Navigate to="/" />;
 };

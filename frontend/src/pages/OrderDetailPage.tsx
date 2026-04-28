@@ -16,7 +16,6 @@ export default function OrderDetailPage() {
   const navigate = useNavigate();
   const [order, setOrder] = useState<any>(null);
   const [verifying, setVerifying] = useState(false);
-  const [verifyMsg, setVerifyMsg] = useState('');
   const payment = location.state?.payment;
 
   const handlePay = async () => {
