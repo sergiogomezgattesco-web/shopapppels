@@ -22,5 +22,8 @@ Thumbs.db
 .vscode/
 .idea/
 
+# Claude Code (preferencias locales, no compartir)
+.claude/
+
 # Prisma generated
 backend/src/generated/
