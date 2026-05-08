@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, type ReactNode } from 'react';
+import { createContext, useContext, useEffect, useState, type ReactNode } from 'react';
 import api from '../services/api';
 
 interface User { id: string; name: string; email: string; role: string; }
@@ -16,6 +16,25 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     const stored = localStorage.getItem('user');
     return stored ? JSON.parse(stored) : null;
   });
+  const [initializing, setInitializing] = useState(() => !!localStorage.getItem('token'));
+
+  useEffect(() => {
+    if (!localStorage.getItem('token')) return;
+    (async () => {
+      try {
+        const { data } = await api.get('/users/me');
+        const fresh = { id: data.id, name: data.name, email: data.email, role: data.role };
+        localStorage.setItem('user', JSON.stringify(fresh));
+        setUser(fresh);
+      } catch {
+        localStorage.removeItem('token');
+        localStorage.removeItem('user');
+        setUser(null);
+      } finally {
+        setInitializing(false);
+      }
+    })();
+  }, []);
 
   const login = async (email: string, password: string) => {
     const { data } = await api.post('/auth/login', { email, password });
@@ -40,6 +59,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       // ignore
     }
   };
+
+  if (initializing) return null;
 
   return <AuthContext.Provider value={{ user, login, logout, refreshUser }}>{children}</AuthContext.Provider>;
 };
